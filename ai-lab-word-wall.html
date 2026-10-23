@@ -1,0 +1,342 @@
+<title>AI Lab Word Wall</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Caveat&family=Space+Mono&family=Cormorant+Garamond&family=JetBrains+Mono&family=Permanent+Marker&family=Fraunces&family=Archivo+Black&family=IBM+Plex+Mono&family=Oswald&family=Syne&family=DM+Serif+Display&family=Playfair+Display&family=Bungee&family=Spectral&family=Shrikhand&family=Zilla+Slab&family=Patrick+Hand&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style>
+  /* Layout: a compact header with the grid flush against its bottom edge - a 4x3 mosaic
+     wall of colored/gradient tiles at a 4:3 tile ratio, so the whole grid lands on 16:9. */
+  :root{
+    --bg:#faf7f2; --fg:#1b1710; --muted:#6b6358; --line:#e4dccf; --accent:#a14e3b;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#141210; --fg:#f2eee7; --muted:#a69c8c; --line:#2b2620; --accent:#e8927c;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#141210; --fg:#f2eee7; --muted:#a69c8c; --line:#2b2620; --accent:#e8927c;
+    color-scheme: dark;
+  }
+  *{box-sizing:border-box}
+  body{background:var(--bg);color:var(--fg);font-family:ui-sans-serif,system-ui,sans-serif;margin:0}
+
+  .shell{
+    padding-inline: max(16px, env(safe-area-inset-left,0px)) max(16px, env(safe-area-inset-right,0px));
+    padding-block: max(1.1rem, env(safe-area-inset-top,0px)) 0;
+    max-width:1600px; margin-inline:auto; width:100%;
+    display:flex;align-items:center;justify-content:space-between;gap:2rem;flex-wrap:wrap;
+  }
+  .shell-text{min-width:0;padding-bottom:1.1rem}
+  .eyebrow{margin:0 0 .3rem;font:600 .68rem/1 'JetBrains Mono',ui-monospace,monospace;letter-spacing:.14em;text-transform:uppercase;color:var(--accent)}
+  h1{margin:0 0 .3rem;font-size:clamp(1.3rem,2.3vw,1.8rem);font-weight:700;letter-spacing:-.02em;text-wrap:balance}
+  .sub{margin:0;max-width:72ch;color:var(--muted);font-size:.85rem;line-height:1.45}
+  .btnRow{flex:none;display:flex;gap:.6rem;flex-wrap:wrap;padding-bottom:1.1rem}
+  .btn{
+    appearance:none;border:1px solid var(--fg);background:transparent;color:var(--fg);
+    font:600 .8rem/1 ui-sans-serif,system-ui,sans-serif;letter-spacing:.02em;
+    padding:.7rem 1.2rem;border-radius:999px;cursor:pointer;transition:background .15s ease,color .15s ease,opacity .15s ease;
+    white-space:nowrap;
+  }
+  .btn:hover{background:var(--fg);color:var(--bg)}
+  .btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .btn:disabled{opacity:.55;cursor:default;background:transparent;color:var(--fg)}
+  .btn[hidden]{display:none}
+  @media (prefers-reduced-motion: reduce){.btn{transition:none}}
+
+  .wall{
+    max-width:1600px;margin-inline:auto;width:100%;
+    display:grid;grid-template-columns:repeat(4,1fr);
+  }
+  .tile{aspect-ratio:4/3}
+  .tileInner{
+    position:relative;display:flex;align-items:center;justify-content:center;
+    width:100%;height:100%;padding:1.5rem;overflow:hidden;border:none;text-align:left;
+    font:inherit;cursor:pointer;outline-offset:-4px;transition:transform .15s ease;
+  }
+  .tileInner:hover{transform:scale(1.015)}
+  .tileInner:focus-visible{outline:3px solid currentColor}
+  @media (prefers-reduced-motion: reduce){.tileInner{transition:none}.tileInner:hover{transform:none}}
+
+  .idx{position:absolute;top:.9rem;left:1.2rem;font:600 .64rem/1 'JetBrains Mono',ui-monospace,monospace;letter-spacing:.1em;opacity:.65}
+  .word{display:inline-block;font-weight:700;text-align:center;text-wrap:balance;white-space:normal;overflow-wrap:normal;letter-spacing:-.01em;max-width:100%}
+  .specimen{position:absolute;bottom:.9rem;left:1.2rem;right:1.2rem;font:500 .58rem/1.3 'JetBrains Mono',ui-monospace,monospace;letter-spacing:.04em;text-transform:uppercase;opacity:.75;text-align:left}
+
+  .sz-l{font-size:clamp(2.5rem,8.6vw,5.2rem);line-height:.95}
+  .sz-m{font-size:clamp(1.65rem,5.6vw,3.2rem);line-height:1.02}
+  .sz-s{font-size:clamp(1.2rem,3.9vw,2rem);line-height:1.1}
+
+  .foot{
+    padding-inline: max(16px, env(safe-area-inset-left,0px)) max(16px, env(safe-area-inset-right,0px));
+    padding-block: 1.75rem calc(3rem + env(safe-area-inset-bottom,0px));
+    max-width:1600px; margin-inline:auto; width:100%;
+    display:flex;justify-content:space-between;align-items:baseline;gap:1rem;flex-wrap:wrap;
+  }
+  .foot p{margin:0;color:var(--muted);font-size:.78rem}
+  .credit{text-align:right}
+  .credit a{color:var(--accent);text-decoration:none;border-bottom:1px solid transparent;transition:border-color .15s ease}
+  .credit a:hover,.credit a:focus-visible{border-color:var(--accent)}
+  @media (prefers-reduced-motion: reduce){.credit a{transition:none}}
+  @media (max-width:720px){.credit{text-align:left}}
+
+  @media (max-width:720px){
+    .wall{grid-template-columns:repeat(2,1fr)}
+    .sz-l{font-size:clamp(2.2rem,9vw,4rem)}
+    .sz-m{font-size:clamp(1.5rem,6vw,2.6rem)}
+    .sz-s{font-size:clamp(1.1rem,4.2vw,1.8rem)}
+  }
+</style>
+
+<div class="shell">
+  <div class="shell-text">
+    <p class="eyebrow">Type &amp; Color Exploration</p>
+    <h1>AI Lab Word Wall</h1>
+    <p class="sub">Twelve candidate words for the AI Lab, each in its own random Google Font and color. Click a tile to re-roll just that one.</p>
+  </div>
+  <div class="btnRow">
+    <button id="saveBtn" class="btn" type="button" hidden>Save PNG</button>
+    <button id="shuffleBtn" class="btn" type="button">Shuffle all &#8635;</button>
+  </div>
+</div>
+
+<div class="wall" id="wall"></div>
+
+<div class="foot">
+  <p>Each specimen caption names the font and hex color used, for picking a combination to reuse.</p>
+  <p class="credit">Created by Lance Shields on 10/22/2026 in Claude Code &middot; <a href="https://www.lanceshields.design/" target="_blank" rel="noopener">lanceshields.design</a></p>
+</div>
+
+<script>
+(function(){
+  var WORDS = ["Lab","Playground","Sandbox","Garden","Experiments","Sketchbook","Craft","Play","Notebook","Workshop","Prototypes","Things I've Made"];
+  var TIERS = ["l","m","m","l","m","m","l","l","m","m","m","s"];
+  var N = WORDS.length;
+
+  var FONTS = [
+    {name:"Bebas Neue", stack:"'Bebas Neue', sans-serif"},
+    {name:"Caveat", stack:"'Caveat', cursive"},
+    {name:"Space Mono", stack:"'Space Mono', monospace"},
+    {name:"Cormorant Garamond", stack:"'Cormorant Garamond', serif"},
+    {name:"JetBrains Mono", stack:"'JetBrains Mono', monospace"},
+    {name:"Permanent Marker", stack:"'Permanent Marker', cursive"},
+    {name:"Fraunces", stack:"'Fraunces', serif"},
+    {name:"Archivo Black", stack:"'Archivo Black', sans-serif"},
+    {name:"IBM Plex Mono", stack:"'IBM Plex Mono', monospace"},
+    {name:"Oswald", stack:"'Oswald', sans-serif"},
+    {name:"Syne", stack:"'Syne', sans-serif"},
+    {name:"DM Serif Display", stack:"'DM Serif Display', serif"},
+    {name:"Playfair Display", stack:"'Playfair Display', serif"},
+    {name:"Bungee", stack:"'Bungee', sans-serif"},
+    {name:"Spectral", stack:"'Spectral', serif"},
+    {name:"Shrikhand", stack:"'Shrikhand', sans-serif"},
+    {name:"Zilla Slab", stack:"'Zilla Slab', serif"},
+    {name:"Patrick Hand", stack:"'Patrick Hand', cursive"}
+  ];
+
+  var COLORS = [
+    {bg:"#16324F", fg:"#F5F3EF"},
+    {bg:"#F2A541", fg:"#1B1710"},
+    {bg:"#D9C7A3", fg:"#2B2013"},
+    {bg:"#3F7D53", fg:"#F5F3EF"},
+    {bg:"#7B4B94", fg:"#F5F3EF"},
+    {bg:"#F6E9DC", fg:"#2B2013"},
+    {bg:"#A14E3B", fg:"#F5F3EF"},
+    {bg:"#FFD23F", fg:"#1B1710"},
+    {bg:"#2E4057", fg:"#F5F3EF"},
+    {bg:"#5B6652", fg:"#F5F3EF"},
+    {bg:"#E8927C", fg:"#2B2013"},
+    {bg:"#121212", fg:"#F5F3EF"},
+    {bg:"#1D7874", fg:"#F5F3EF"},
+    {bg:"#C1292E", fg:"#F5F3EF"},
+    {bg:"#B8C4BA", fg:"#1B1710"},
+    {bg:"#4A2545", fg:"#F5F3EF"},
+    {bg:"#E0E0D7", fg:"#1B1710"},
+    {bg:"#0B4F6C", fg:"#F5F3EF"}
+  ];
+
+  // Two-stop diagonal gradients, sharing hues with COLORS so they read as part of the same set.
+  var GRADIENTS = [
+    {from:"#F2A541", to:"#C1292E", fg:"#FFF6EC"},
+    {from:"#7B4B94", to:"#2E4057", fg:"#F5F3EF"},
+    {from:"#1D7874", to:"#16324F", fg:"#F5F3EF"},
+    {from:"#FFD23F", to:"#A14E3B", fg:"#1B1710"},
+    {from:"#3F7D53", to:"#1D7874", fg:"#F5F3EF"},
+    {from:"#E8927C", to:"#7B4B94", fg:"#2B2013"},
+    {from:"#4A2545", to:"#121212", fg:"#F5F3EF"},
+    {from:"#0B4F6C", to:"#3F7D53", fg:"#F5F3EF"},
+    {from:"#C1292E", to:"#4A2545", fg:"#F5F3EF"},
+    {from:"#D9C7A3", to:"#A14E3B", fg:"#2B2013"}
+  ];
+
+  var wall = document.getElementById("wall");
+  var innerEls = [], wordEls = [];
+  var state = WORDS.map(function(){ return {gradient:false, idx:0}; });
+
+  function pick(n, k){
+    var arr = []; for (var i=0;i<n;i++) arr.push(i);
+    for (var j=arr.length-1;j>0;j--){ var r=Math.floor(Math.random()*(j+1)); var t=arr[j]; arr[j]=arr[r]; arr[r]=t; }
+    return arr.slice(0,k);
+  }
+
+  function buildTiles(){
+    WORDS.forEach(function(w, i){
+      var tile = document.createElement("div");
+      tile.className = "tile";
+
+      var inner = document.createElement("button");
+      inner.type = "button";
+      inner.className = "tileInner sz-" + TIERS[i];
+      inner.setAttribute("aria-label", "Tile " + (i+1) + ": " + w + ". Click to re-roll its font and color.");
+
+      var idx = document.createElement("span");
+      idx.className = "idx";
+      idx.textContent = String(i+1).padStart(2,"0");
+
+      var word = document.createElement("span");
+      word.className = "word";
+      word.textContent = w;
+
+      var spec = document.createElement("span");
+      spec.className = "specimen";
+
+      inner.appendChild(idx);
+      inner.appendChild(word);
+      inner.appendChild(spec);
+      inner.addEventListener("click", function(){ rerollOne(i); });
+
+      tile.appendChild(inner);
+      wall.appendChild(tile);
+      innerEls.push(inner);
+      wordEls.push(word);
+    });
+  }
+
+  function paintTile(i){
+    var inner = innerEls[i];
+    var word = wordEls[i];
+    if (state[i].gradient){
+      var g = GRADIENTS[state[i].idx];
+      inner.style.background = "linear-gradient(135deg, " + g.from + ", " + g.to + ")";
+      inner.style.color = g.fg;
+      inner.dataset.swatch = g.from.toUpperCase() + " -> " + g.to.toUpperCase();
+    } else {
+      var c = COLORS[state[i].idx];
+      inner.style.background = c.bg;
+      inner.style.color = c.fg;
+      inner.dataset.swatch = c.bg.toUpperCase();
+    }
+    word.style.fontSize = "";
+    fitWord(inner, word);
+  }
+
+  // Fonts are assigned at random, so a wide display face can overrun its tile at the tier's
+  // default size (e.g. a single long word in a blocky display font). Shrink in whole pixels
+  // until every line clears the tile, instead of letting it wrap mid-word or clip.
+  function fitWord(inner, word){
+    var cs = getComputedStyle(inner);
+    var availW = inner.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+    var availH = inner.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+    var size = parseFloat(getComputedStyle(word).fontSize);
+    var minSize = 13, guard = 60;
+    while ((word.scrollWidth > availW || word.scrollHeight > availH) && size > minSize && guard-- > 0){
+      size -= 1;
+      word.style.fontSize = size + "px";
+    }
+  }
+
+  function setFontAndSpecimen(i, fontIdx){
+    var font = FONTS[fontIdx];
+    var word = wordEls[i];
+    word.style.fontFamily = font.stack;
+    word.style.fontSize = "";
+    var inner = innerEls[i];
+    inner.querySelector(".specimen").textContent = font.name + " / " + inner.dataset.swatch;
+    fitWord(inner, word);
+  }
+
+  function shuffleAll(){
+    var gradCount = Math.random() < 0.5 ? 3 : 4;
+    var gradSlots = {};
+    pick(N, gradCount).forEach(function(i){ gradSlots[i] = true; });
+
+    var fIdx = pick(FONTS.length, N);
+    var gradPicks = pick(GRADIENTS.length, gradCount);
+    var colorPicks = pick(COLORS.length, N - gradCount);
+    var gi = 0, ci = 0;
+
+    for (var i = 0; i < N; i++){
+      var isGrad = !!gradSlots[i];
+      state[i] = { gradient: isGrad, idx: isGrad ? gradPicks[gi++] : colorPicks[ci++] };
+      paintTile(i);
+      setFontAndSpecimen(i, fIdx[i]);
+    }
+  }
+
+  function rerollOne(i){
+    if (state[i].gradient){
+      var usedG = {};
+      state.forEach(function(s, idx){ if (idx !== i && s.gradient) usedG[s.idx] = true; });
+      var availG = []; GRADIENTS.forEach(function(_, idx){ if (!usedG[idx]) availG.push(idx); });
+      state[i].idx = availG[Math.floor(Math.random()*availG.length)];
+    } else {
+      var usedC = {};
+      state.forEach(function(s, idx){ if (idx !== i && !s.gradient) usedC[s.idx] = true; });
+      var availC = []; COLORS.forEach(function(_, idx){ if (!usedC[idx]) availC.push(idx); });
+      state[i].idx = availC[Math.floor(Math.random()*availC.length)];
+    }
+    var fontIdx = Math.floor(Math.random()*FONTS.length);
+    paintTile(i);
+    setFontAndSpecimen(i, fontIdx);
+  }
+
+  buildTiles();
+  shuffleAll();
+  document.getElementById("shuffleBtn").addEventListener("click", shuffleAll);
+
+  var resizeTimer = null;
+  window.addEventListener("resize", function(){
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(function(){
+      innerEls.forEach(function(inner, i){ fitWord(inner, wordEls[i]); });
+    }, 120);
+  });
+
+  // --- Save as PNG, via the platform's downloads capability (a plain <a download> or
+  // script-driven save is inert in this sandbox). html2canvas captures exactly what's on
+  // screen - gradients and web fonts included - without re-implementing layout. ---
+  var saveBtn = document.getElementById("saveBtn");
+  var downloadsCap = null;
+  if (window.claude && window.claude.use){
+    window.claude.use("downloads").then(function(d){
+      downloadsCap = d;
+      if (d && window.html2canvas) saveBtn.hidden = false;
+    }).catch(function(){});
+  }
+
+  saveBtn.addEventListener("click", function(){
+    if (!downloadsCap || !window.html2canvas) return;
+    var original = saveBtn.textContent;
+    saveBtn.disabled = true;
+    saveBtn.textContent = "Rendering…";
+    document.fonts.ready.then(function(){
+      return html2canvas(wall, {
+        backgroundColor: getComputedStyle(document.body).backgroundColor,
+        scale: Math.min(3, (window.devicePixelRatio || 1) * 2),
+        useCORS: true
+      });
+    }).then(function(canvas){
+      return new Promise(function(resolve, reject){
+        canvas.toBlob(function(blob){ blob ? resolve(blob) : reject(new Error("toBlob failed")); }, "image/png");
+      });
+    }).then(function(blob){
+      return downloadsCap.save({ filename: "ai-lab-word-wall.png", data: blob });
+    }).then(function(result){
+      saveBtn.textContent = result.status === "saved" ? "Saved" : "Sent";
+      setTimeout(function(){ saveBtn.textContent = original; saveBtn.disabled = false; }, 1800);
+    }).catch(function(err){
+      saveBtn.textContent = (err && err.code === "declined") ? original : "Couldn't save";
+      setTimeout(function(){ saveBtn.textContent = original; saveBtn.disabled = false; }, 1800);
+    });
+  });
+})();
+</script>
